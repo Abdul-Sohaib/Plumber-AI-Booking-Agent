@@ -1,27 +1,19 @@
 // script.js.template
-// This file will be converted to script.js at container startup via envsubst.
 // Placeholders: __EMAILJS_USER_ID__, __EMAILJS_SERVICE_ID__, __EMAILJS_TEMPLATE_ID__
 
-/* ========== EmailJS configuration (substituted at container start) ========== */
+/* ========== EmailJS configuration ========== */
 const EMAILJS_USER_ID = "__EMAILJS_USER_ID__";
 const EMAILJS_SERVICE_ID = "__EMAILJS_SERVICE_ID__";
 const EMAILJS_TEMPLATE_ID = "__EMAILJS_TEMPLATE_ID__";
 
-/* If you prefer to hardcode the values here, replace the placeholders above.
-   Example:
-   const EMAILJS_USER_ID = "I1sz_o0pl5RWRr-jR";
-   const EMAILJS_SERVICE_ID = "service_g9e6nwv";
-   const EMAILJS_TEMPLATE_ID = "template_wb8w9iq";
-*/
-
-/* ========== Load EmailJS SDK dynamically and init ========== */
+/* ========== Load EmailJS SDK dynamically ========== */
 (function loadEmailJSSDK(){
   if (window.emailjs) {
     try { emailjs.init(EMAILJS_USER_ID); } catch(e){ console.warn(e); }
     return;
   }
   const s = document.createElement('script');
-  s.src = 'https://cdn.emailjs.com/sdk/3.2.0/email.min.js';
+  s.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
   s.onload = function(){
     if (window.emailjs && typeof emailjs.init === 'function') {
       try { emailjs.init(EMAILJS_USER_ID); console.info('EmailJS initialized'); } catch(e){ console.warn(e); }
@@ -45,30 +37,47 @@ function sendBookingEmail({ name, address, urgency }) {
     return Promise.reject('EmailJS not loaded');
   }
 
-  return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
-    .then(function(response){
-      console.log('EmailJS send success', response);
-      return response;
-    })
-    .catch(function(err){
-      console.error('EmailJS send failed', err);
-      throw err;
-    });
+  return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
 }
 
-/* ========== Retell integration + fallback demo ========== */
+/* ============================================================
+    ✅ OPTION B — RETELL CALLBACK WIDGET INTEGRATION
+    Loads floating Retell widget automatically. No modal needed.
+   ============================================================ */
 
-/*
-  Attempt to load a Retell SDK. If the SDK is not available, the script falls back
-  to a simple demo UI that asks for name, address and urgency via form fields.
-  Replace the Retell init snippet with the real Retell SDK call if you have it.
-*/
+// ✅ Load Retell Callback Widget into site
+function loadRetellCallbackWidget() {
+  const script = document.createElement("script");
+  script.id = "retell-widget";
+  script.type = "module";
+
+  // ✅ REQUIRED – you MUST replace these:
+  script.src = "https://dashboard.retellai.com/retell-widget.js";
+  script.setAttribute("data-public-key", "key_afb7a1f6fb75af89504c8dd8475f");      // REQUIRED
+  script.setAttribute("data-agent-id",    "agent_bb2742fe7be5988c49d74d5104");        // REQUIRED
+  script.setAttribute("data-widget",      "callback");
+  script.setAttribute("data-phone-number","7638038626");   // REQUIRED
+  script.setAttribute("data-title",       "Request a Call");
+  script.setAttribute("data-countries",   "US,CA,GB");
+  script.setAttribute("data-color",       "#0B84FF");
+  script.setAttribute("data-tc",          "https://your-site.com/terms");
+  script.setAttribute("data-recaptcha-key","YOUR_RECAPTCHA_SITE_KEY");   // Optional if you have one.
+
+  document.head.appendChild(script);
+}
+
+// ✅ Load Retell widget immediately
+loadRetellCallbackWidget();
+
+/* ============================================================
+    ✅ FALLBACK MANUAL BOOKING FORM (still useful)
+    Your modal fallback still works for users who prefer typing.
+   ============================================================ */
 
 function openAgentModal(){
   const modal = document.getElementById('agent-modal');
   modal.setAttribute('aria-hidden','false');
-  // initialize retell or fallback UI
-  initRetellOrFallback();
+  showFallbackFormOnly();
 }
 
 function closeAgentModal(){
@@ -76,141 +85,42 @@ function closeAgentModal(){
   modal.setAttribute('aria-hidden','true');
 }
 
+// Bind buttons
 document.getElementById('book-btn').addEventListener('click', openAgentModal);
 document.getElementById('book-btn-2').addEventListener('click', openAgentModal);
 document.getElementById('modal-close').addEventListener('click', closeAgentModal);
 
-// Simple UI update helpers
-function setModalStatus(text){ const el = document.getElementById('retell-status'); if(el) el.textContent = text; }
-function setResult(text){ const el = document.getElementById('modal-result'); if(el) el.textContent = text; }
-function updatePageStatus(mainText, subText){ const s = document.getElementById('booking-status'); const s2 = document.getElementById('booking-status-2'); if(s) s.textContent = mainText; if(s2) s2.textContent = subText; }
-
-/* ---- on booking confirmed handler (called by Retell hook or fallback) ---- */
-function onRetellConfirmed(booking) {
-  // booking = { name: "...", address: "...", urgency: "Emergency" }
-  setModalStatus('Thanks. Confirming booking...');
-  updatePageStatus('✅ Your appointment is confirmed. Thank you!', 'Notifying owner...');
-
-  // send owner email
-  sendBookingEmail(booking)
-    .then(()=> {
-      setResult('Owner has been notified.');
-      updatePageStatus('✅ Your appointment is confirmed. Thank you!', 'Owner notified via email.');
-      // optionally close modal after 4 seconds
-      setTimeout(closeAgentModal, 2000);
-    })
-    .catch(()=> {
-      setResult('Could not notify owner by email. Please call.');
-      updatePageStatus('✅ Your appointment is confirmed. Thank you!', 'Could not send owner email.');
-    });
-}
-
-/* ---- Initialize Retell SDK (if available) or fallback demo ---- */
-function initRetellOrFallback(){
-  setModalStatus('Loading assistant...');
-  // Try to load Retell SDK (example CDN). If your Retell SDK uses a different URL, replace it.
-  if (window.RetellAgent) {
-    // already available
-    mountRetell(window.RetellAgent);
-    return;
-  }
-
-  // Try to dynamically load a Retell SDK script (common CDN path used as example).
-  const r = document.createElement('script');
-  r.src = 'https://cdn.retell.ai/agent.js'; // replace with actual Retell SDK URL if different
-  r.onload = function(){
-    if (window.RetellAgent) {
-      mountRetell(window.RetellAgent);
-    } else {
-      // fallback if the script didn't expose a usable API
-      console.warn('Retell script loaded but API not found. Using fallback demo.');
-      showFallbackDemo();
-    }
-  };
-  r.onerror = function(){
-    console.warn('Retell SDK failed to load. Using fallback demo.');
-    showFallbackDemo();
-  };
-  document.head.appendChild(r);
-
-  // Also start a timer: if Retell doesn't initialize in 2.5s we show fallback
-  setTimeout(function(){
-    if (!window.RetellAgent && document.getElementById('fallback-ui').style.display === 'none') {
-      showFallbackDemo();
-    }
-  }, 2500);
-}
-
-/* ---- mountRetell: example integration */
-function mountRetell(RetellAgentCtor){
-  setModalStatus('Initializing assistant...');
-  // Try to load the agent config JSON
-  fetch('/retell-config.json').then(res => res.json()).then(config => {
-    // This part is implementation-specific to Retell. Replace with the real SDK
-    // Example pseudo-code:
-    try {
-      const agent = new RetellAgentCtor({
-        config: config,
-        onConfirmation: function(slots){
-          // Example: slots => { name:'', address:'', urgency:'' }
-          onRetellConfirmed(slots);
-        },
-        onReady: function(){
-          setModalStatus('Assistant is ready. Speak now.');
-        },
-        onError: function(e){
-          console.error('Retell error', e);
-          setModalStatus('Assistant error. Using fallback.');
-          showFallbackDemo();
-        }
-      });
-      // mount to DOM
-      const mount = document.getElementById('retell-widget');
-      if (mount) {
-        // If the SDK provides a mount method:
-        if (typeof agent.mount === 'function') {
-          agent.mount(mount);
-        } else {
-          mount.innerHTML = '<div>Assistant ready. Please speak.</div>';
-        }
-      }
-    } catch (err) {
-      console.warn('Could not initialize Retell agent', err);
-      setModalStatus('Assistant initialization failed. Using fallback.');
-      showFallbackDemo();
-    }
-  }).catch(err => {
-    console.warn('Could not load retell-config.json', err);
-    setModalStatus('Agent config failed to load. Using fallback.');
-    showFallbackDemo();
-  });
-}
-
-/* ---- fallback demo: simple HTML form for testing without Retell ---- */
-function showFallbackDemo(){
-  setModalStatus('Using demo assistant. Fill the form below.');
+// ✅ This replaces broken Retell web-call logic
+function showFallbackFormOnly() {
   const fallback = document.getElementById('fallback-ui');
   if (fallback) fallback.style.display = 'block';
+  document.getElementById('retell-status').textContent = "No mic needed. Fill details below.";
+}
 
-  // ensure demo button wired
-  const demoBtn = document.getElementById('demo-submit');
-  if (demoBtn) {
-    demoBtn.onclick = function(){
-      const name = document.getElementById('demo-name').value.trim();
-      const address = document.getElementById('demo-address').value.trim();
-      const urgency = document.getElementById('demo-urgency').value;
-      if (!name || !address) {
-        alert('Please provide name and address.');
-        return;
-      }
-      // mimic confirmation step
-      const isCorrect = confirm(`Confirm booking:\nName: ${name}\nAddress: ${address}\nUrgency: ${urgency}\n\nIs this correct?`);
-      if (isCorrect) {
-        onRetellConfirmed({ name, address, urgency });
-      }
+// ✅ Handle fallback form booking
+const demoBtn = document.getElementById('demo-submit');
+if (demoBtn) {
+  demoBtn.onclick = function(){
+    const name = document.getElementById('demo-name').value.trim();
+    const address = document.getElementById('demo-address').value.trim();
+    const urgency = document.getElementById('demo-urgency').value;
+
+    if (!name || !address) {
+      alert('Please enter name and address.');
+      return;
+    }
+
+    const confirmData = confirm(`Confirm booking:\nName: ${name}\nAddress: ${address}\nUrgency: ${urgency}`);
+    if (confirmData) {
+      sendBookingEmail({ name, address, urgency })
+        .then(() => {
+          document.getElementById('booking-status').textContent = "✅ Booking confirmed!";
+          document.getElementById('booking-status-2').textContent = "Owner notified via email.";
+          closeAgentModal();
+        })
+        .catch(() => {
+          document.getElementById('modal-result').textContent = "Error: Could not send email.";
+        });
     }
   }
 }
-
-/* --- expose onRetellConfirmed to window for use by real Retell hooks (if needed) --- */
-window.onRetellConfirmed = onRetellConfirmed;
