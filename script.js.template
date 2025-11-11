@@ -1,5 +1,5 @@
 // script.js.template
-// Placeholders: __EMAILJS_USER_ID__, __EMAILJS_SERVICE_ID__, __EMAILJS_TEMPLATE_ID__
+// Placeholders: __EMAILJS_USER_ID__, __EMAILJS_SERVICE_ID__, __EMAILJS_TEMPLATE_ID__, __VAPI_ASSISTANT_ID__, __VAPI_PUBLIC_KEY__
 
 /* ========== EmailJS configuration ========== */
 const EMAILJS_USER_ID = "__EMAILJS_USER_ID__";
@@ -7,120 +7,110 @@ const EMAILJS_SERVICE_ID = "__EMAILJS_SERVICE_ID__";
 const EMAILJS_TEMPLATE_ID = "__EMAILJS_TEMPLATE_ID__";
 
 /* ========== Load EmailJS SDK dynamically ========== */
-(function loadEmailJSSDK(){
-  if (window.emailjs) {
-    try { emailjs.init(EMAILJS_USER_ID); } catch(e){ console.warn(e); }
-    return;
-  }
-  const s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
-  s.onload = function(){
-    if (window.emailjs && typeof emailjs.init === 'function') {
-      try { emailjs.init(EMAILJS_USER_ID); console.info('EmailJS initialized'); } catch(e){ console.warn(e); }
+(function loadEmailJSSDK() {
+  const s = document.createElement("script");
+  s.src = "https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js";
+  s.onload = function () {
+    if (window.emailjs && typeof emailjs.init === "function") {
+      emailjs.init(EMAILJS_USER_ID);
+      console.info("EmailJS initialized");
     }
   };
-  s.onerror = function(){ console.warn('EmailJS SDK failed to load'); };
+  s.onerror = () => console.warn("EmailJS SDK failed to load");
   document.head.appendChild(s);
 })();
 
 /* ========== Helper: send booking email via EmailJS ========== */
 function sendBookingEmail({ name, address, urgency }) {
-  const templateParams = {
+  return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
     customer_name: name,
     customer_address: address,
     customer_urgency: urgency,
-    submitted_at: new Date().toLocaleString()
-  };
-
-  if (!window.emailjs || !emailjs.send) {
-    console.error('EmailJS not available');
-    return Promise.reject('EmailJS not loaded');
-  }
-
-  return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+    submitted_at: new Date().toLocaleString(),
+  });
 }
 
 /* ============================================================
-    ✅ OPTION B — RETELL CALLBACK WIDGET INTEGRATION
-    Loads floating Retell widget automatically. No modal needed.
+    ✅ VAPI AI VOICE AGENT INTEGRATION (NO BACKEND NEEDED)
    ============================================================ */
 
-// ✅ Load Retell Callback Widget into site
-function loadRetellCallbackWidget() {
-  const script = document.createElement("script");
-  script.id = "retell-widget";
-  script.type = "module";
+// 🔑 Filled by Docker at runtime
+const VAPI_ASSISTANT_ID = "__VAPI_ASSISTANT_ID__";
+const VAPI_PUBLIC_KEY = "__VAPI_PUBLIC_KEY__";
 
-  // ✅ REQUIRED – you MUST replace these:
-  script.src = "https://dashboard.retellai.com/retell-widget.js";
-  script.setAttribute("data-public-key", "key_afb7a1f6fb75af89504c8dd8475f");      // REQUIRED
-  script.setAttribute("data-agent-id",    "agent_bb2742fe7be5988c49d74d5104");        // REQUIRED
-  script.setAttribute("data-widget",      "callback");
-  script.setAttribute("data-phone-number","7638038626");   // REQUIRED
-  script.setAttribute("data-title",       "Request a Call");
-  script.setAttribute("data-countries",   "US,CA,GB");
-  script.setAttribute("data-color",       "#0B84FF");
-  script.setAttribute("data-tc",          "https://your-site.com/terms");
-  script.setAttribute("data-recaptcha-key","YOUR_RECAPTCHA_SITE_KEY");   // Optional if you have one.
+// Initialize VAPI client
+const vapiClient = new Vapi.Client({
+  apiKey: VAPI_PUBLIC_KEY,
+});
 
-  document.head.appendChild(script);
+/* ✅ When user clicks BOOK – start voice agent conversation */
+function startVapiAgent() {
+  vapiClient.startConversation({
+    assistantId: VAPI_ASSISTANT_ID,
+
+    onMessage: (msg) => {
+      console.log("VAPI Message:", msg);
+
+      // ✅ When agent completes booking
+      if (msg.type === "event" && msg.name === "booking_complete") {
+        const { name, address, urgency } = msg.data;
+
+        // ✅ send via EmailJS
+        sendBookingEmail({ name, address, urgency })
+          .then(() => {
+            document.getElementById("booking-status").textContent =
+              "✅ Booking confirmed!";
+            document.getElementById("booking-status-2").textContent =
+              "Owner notified via email.";
+          })
+          .catch(() => {
+            document.getElementById("booking-status").textContent =
+              "❌ Error notifying owner.";
+          });
+      }
+    },
+  });
 }
 
-// ✅ Load Retell widget immediately
-loadRetellCallbackWidget();
+/* ✅ Bind UI Buttons */
+document.getElementById("book-btn").addEventListener("click", startVapiAgent);
+document.getElementById("book-btn-2").addEventListener("click", startVapiAgent);
 
 /* ============================================================
-    ✅ FALLBACK MANUAL BOOKING FORM (still useful)
-    Your modal fallback still works for users who prefer typing.
+    ✅ Fallback Modal (Manual Typed Booking)
+    Also sends EmailJS if user prefers typing.
    ============================================================ */
 
-function openAgentModal(){
-  const modal = document.getElementById('agent-modal');
-  modal.setAttribute('aria-hidden','false');
-  showFallbackFormOnly();
+function openAgentModal() {
+  document.getElementById("agent-modal").setAttribute("aria-hidden", "false");
 }
 
-function closeAgentModal(){
-  const modal = document.getElementById('agent-modal');
-  modal.setAttribute('aria-hidden','true');
+function closeAgentModal() {
+  document.getElementById("agent-modal").setAttribute("aria-hidden", "true");
 }
 
-// Bind buttons
-document.getElementById('book-btn').addEventListener('click', openAgentModal);
-document.getElementById('book-btn-2').addEventListener('click', openAgentModal);
-document.getElementById('modal-close').addEventListener('click', closeAgentModal);
+document.getElementById("modal-close").addEventListener("click", closeAgentModal);
 
-// ✅ This replaces broken Retell web-call logic
-function showFallbackFormOnly() {
-  const fallback = document.getElementById('fallback-ui');
-  if (fallback) fallback.style.display = 'block';
-  document.getElementById('retell-status').textContent = "No mic needed. Fill details below.";
-}
+document.getElementById("demo-submit").onclick = function () {
+  const name = document.getElementById("demo-name").value.trim();
+  const address = document.getElementById("demo-address").value.trim();
+  const urgency = document.getElementById("demo-urgency").value;
 
-// ✅ Handle fallback form booking
-const demoBtn = document.getElementById('demo-submit');
-if (demoBtn) {
-  demoBtn.onclick = function(){
-    const name = document.getElementById('demo-name').value.trim();
-    const address = document.getElementById('demo-address').value.trim();
-    const urgency = document.getElementById('demo-urgency').value;
-
-    if (!name || !address) {
-      alert('Please enter name and address.');
-      return;
-    }
-
-    const confirmData = confirm(`Confirm booking:\nName: ${name}\nAddress: ${address}\nUrgency: ${urgency}`);
-    if (confirmData) {
-      sendBookingEmail({ name, address, urgency })
-        .then(() => {
-          document.getElementById('booking-status').textContent = "✅ Booking confirmed!";
-          document.getElementById('booking-status-2').textContent = "Owner notified via email.";
-          closeAgentModal();
-        })
-        .catch(() => {
-          document.getElementById('modal-result').textContent = "Error: Could not send email.";
-        });
-    }
+  if (!name || !address) {
+    alert("Please enter name and address.");
+    return;
   }
-}
+
+  sendBookingEmail({ name, address, urgency })
+    .then(() => {
+      document.getElementById("booking-status").textContent =
+        "✅ Booking confirmed!";
+      document.getElementById("booking-status-2").textContent =
+        "Owner notified via email.";
+      closeAgentModal();
+    })
+    .catch(() => {
+      document.getElementById("modal-result").textContent =
+        "❌ Error: Could not notify owner. Please try again.";
+    });
+};

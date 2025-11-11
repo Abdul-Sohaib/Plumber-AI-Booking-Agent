@@ -3,97 +3,73 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Choice Plumbing — Book Appointment</title>
-  <link rel="stylesheet" href="/style.css">
-  <meta name="description" content="Choice Plumbing — Reliable 24/7 plumbing. Book quickly with our AI voice assistant.">
+  <title>Choice Plumbing USA – Book Appointment</title>
+  <meta name="description" content="Professional 24/7 plumber service. Book with our AI voice assistant.">
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <nav class="nav">
     <div class="nav-inner">
-      <div class="brand">Choice Plumbing</div>
+      <div class="brand">
+        <img src="/assets/images/logo.png" alt="logo" style="height:34px;margin-right:8px;vertical-align:middle;">
+        Choice Plumbing USA
+      </div>
       <div class="trust">Licensed · Insured · 24/7</div>
     </div>
   </nav>
 
   <header class="hero">
     <div class="hero-left">
-      <h1>Reliable. Fast. 24/7 Plumbing Services</h1>
-      <p>Talk to our AI assistant and book your appointment in seconds.</p>
+      <h1>Fast, Reliable Plumbing Services</h1>
+      <p>Click below to talk with our AI Voice Agent and book your appointment instantly.</p>
+
       <div class="hero-ctas">
-        <button id="book-btn" class="cta">Book Appointment (AI Assistant)</button>
-        <a class="phone" href="tel:+18001234567">Or call: (800) 123-4567</a>
+        <button id="book-btn" class="cta">🎤 Talk to AI Voice Agent</button>
+        <a class="phone" href="tel:+18001234567">Or Call: (800) 123-4567</a>
       </div>
+
       <div id="booking-status" class="status" aria-live="polite"></div>
       <div id="booking-status-2" class="status-small" aria-live="polite"></div>
     </div>
+
     <div class="hero-right">
-      <img src="/assets/images/plumberimg.jpg" alt="Plumber working" class="hero-image">
+      <img src="/assets/images/plumber-hero.jpg" class="hero-image" alt="Plumber working">
     </div>
   </header>
 
-  <main class="main">
-    <section class="features">
-      <div class="card">
-        <h3>Emergency Response</h3>
-        <p>Immediate dispatch for burst pipes and dangerous leaks.</p>
-      </div>
-      <div class="card">
-        <h3>Certified Technicians</h3>
-        <p>Experienced and licensed professionals.</p>
-      </div>
-      <div class="card">
-        <h3>Transparent Pricing</h3>
-        <p>Clear estimates before any work begins.</p>
-      </div>
-    </section>
+  <section class="features">
+    <div class="card">
+      <h3>Emergency Response</h3>
+      <p>Immediate support for major leaks & pipe bursts.</p>
+    </div>
+    <div class="card">
+      <h3>Certified Technicians</h3>
+      <p>Fully licensed plumbing professionals.</p>
+    </div>
+    <div class="card">
+      <h3>Upfront Pricing</h3>
+      <p>No surprises. Clear estimates before work starts.</p>
+    </div>
+  </section>
 
-    <section class="ai-info">
-      <h2>AI Booking Assistant</h2>
-      <p>The assistant collects your name, address and urgency and sends the booking directly to Choice Plumbing.</p>
-      <button id="book-btn-2" class="cta small">Try the AI Assistant</button>
-    </section>
-  </main>
+  <section class="ai-info">
+    <h2>AI Voice Booking Assistant</h2>
+    <p>Our AI will collect your Name, Address and Urgency, then confirm your booking.</p>
+    <button id="book-btn-2" class="cta small">Talk to Agent</button>
+  </section>
 
   <footer class="footer">
-    <div>Choice Plumbing © <span id="year"></span></div>
-    <div>Service Areas: Nationwide (US)</div>
+    <div>© <span id="year"></span> Choice Plumbing USA</div>
   </footer>
 
-  <!-- Modal for voice agent -->
-  <div id="agent-modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true">
-    <div class="modal-panel">
-      <button id="modal-close" class="modal-close" aria-label="Close">✕</button>
-      <div class="modal-content">
-        <h3>AI Assistant</h3>
-        <p class="modal-sub">Short, polite, professional. Collects Name, Address & Urgency.</p>
-        <!-- Container where Retell widget (or demo UI) will mount -->
-        <div id="retell-widget" class="retell-widget">
-          <div id="retell-status">Initializing assistant...</div>
-          <!-- For the fallback demo UI -->
-          <div id="fallback-ui" style="display:none">
-            <p>If the agent doesn't load, fill details below:</p>
-            <label>Name <input id="demo-name" /></label>
-            <label>Address <input id="demo-address" /></label>
-            <label>Urgency 
-              <select id="demo-urgency">
-                <option value="Routine">Routine</option>
-                <option value="Same-day">Same-day</option>
-                <option value="Emergency">Emergency</option>
-              </select>
-            </label>
-            <button id="demo-submit" class="cta">Confirm Booking</button>
-          </div>
-        </div>
-        <div id="modal-result" class="modal-result"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- script.js will be substituted at container start from script.js.template -->
-  <script src="/script.js"></script>
+  <!-- Final compiled JS (after Docker envsubst) -->
+  <script src="script.js"></script>
   <script>
-    // small dynamic bits
-    document.getElementById('year').textContent = new Date().getFullYear();
+    document.getElementById("year").textContent = new Date().getFullYear();
   </script>
+
+  <!-- VAPI SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@vapi-ai/web"></script>
 </body>
 </html>
