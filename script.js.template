@@ -13,14 +13,14 @@ const EMAILJS_TEMPLATE_ID = "__EMAILJS_TEMPLATE_ID__";
   s.onload = function () {
     if (window.emailjs && typeof emailjs.init === "function") {
       emailjs.init(EMAILJS_USER_ID);
-      console.info("EmailJS initialized");
+      console.info("✅ EmailJS initialized");
     }
   };
-  s.onerror = () => console.warn("EmailJS SDK failed to load");
+  s.onerror = () => console.warn("❌ EmailJS SDK failed to load");
   document.head.appendChild(s);
 })();
 
-/* ========== Helper: send booking email via EmailJS ========== */
+/* ========== Send booking email ========== */
 function sendBookingEmail({ name, address, urgency }) {
   return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
     customer_name: name,
@@ -31,86 +31,100 @@ function sendBookingEmail({ name, address, urgency }) {
 }
 
 /* ============================================================
-    ✅ VAPI AI VOICE AGENT INTEGRATION (NO BACKEND NEEDED)
+    ✅ VAPI AI VOICE AGENT (NO BACKEND)
    ============================================================ */
 
-// 🔑 Filled by Docker at runtime
 const VAPI_ASSISTANT_ID = "__VAPI_ASSISTANT_ID__";
 const VAPI_PUBLIC_KEY = "__VAPI_PUBLIC_KEY__";
 
-// Initialize VAPI client
+// ✅ Ensure Vapi SDK is loaded
+if (!window.Vapi) {
+  console.error("❌ Vapi SDK is not loaded. Check index.html script order.");
+}
+
 const vapiClient = new Vapi.Client({
   apiKey: VAPI_PUBLIC_KEY,
 });
 
-/* ✅ When user clicks BOOK – start voice agent conversation */
+/* ✅ Start voice agent */
 function startVapiAgent() {
+  console.log("🎤 Starting VAPI conversation...");
+
   vapiClient.startConversation({
     assistantId: VAPI_ASSISTANT_ID,
 
     onMessage: (msg) => {
-      console.log("VAPI Message:", msg);
+      console.log("📩 VAPI Message:", msg);
 
-      // ✅ When agent completes booking
+      // ✅ Booking complete event from VAPI
       if (msg.type === "event" && msg.name === "booking_complete") {
         const { name, address, urgency } = msg.data;
 
-        // ✅ send via EmailJS
         sendBookingEmail({ name, address, urgency })
           .then(() => {
             document.getElementById("booking-status").textContent =
               "✅ Booking confirmed!";
             document.getElementById("booking-status-2").textContent =
-              "Owner notified via email.";
+              "✅ Owner notified via email.";
           })
           .catch(() => {
             document.getElementById("booking-status").textContent =
-              "❌ Error notifying owner.";
+              "❌ Error sending email.";
           });
       }
     },
   });
 }
 
-/* ✅ Bind UI Buttons */
-document.getElementById("book-btn").addEventListener("click", startVapiAgent);
-document.getElementById("book-btn-2").addEventListener("click", startVapiAgent);
+/* ✅ Attach to booking buttons */
+const btn1 = document.getElementById("book-btn");
+if (btn1) btn1.addEventListener("click", startVapiAgent);
+
+const btn2 = document.getElementById("book-btn-2");
+if (btn2) btn2.addEventListener("click", startVapiAgent);
 
 /* ============================================================
-    ✅ Fallback Modal (Manual Typed Booking)
-    Also sends EmailJS if user prefers typing.
+    ✅ OPTIONAL FALLBACK BOOKING FORM (if exists)
    ============================================================ */
 
+// Modal open/close only if modal exists
+const modal = document.getElementById("agent-modal");
+const modalClose = document.getElementById("modal-close");
+
 function openAgentModal() {
-  document.getElementById("agent-modal").setAttribute("aria-hidden", "false");
+  if (modal) modal.setAttribute("aria-hidden", "false");
 }
 
 function closeAgentModal() {
-  document.getElementById("agent-modal").setAttribute("aria-hidden", "true");
+  if (modal) modal.setAttribute("aria-hidden", "true");
 }
 
-document.getElementById("modal-close").addEventListener("click", closeAgentModal);
+if (modalClose) modalClose.addEventListener("click", closeAgentModal);
 
-document.getElementById("demo-submit").onclick = function () {
-  const name = document.getElementById("demo-name").value.trim();
-  const address = document.getElementById("demo-address").value.trim();
-  const urgency = document.getElementById("demo-urgency").value;
+// Fallback form submission (only if form elements exist)
+const demoSubmit = document.getElementById("demo-submit");
+if (demoSubmit) {
+  demoSubmit.onclick = function () {
+    const name = document.getElementById("demo-name")?.value.trim();
+    const address = document.getElementById("demo-address")?.value.trim();
+    const urgency = document.getElementById("demo-urgency")?.value;
 
-  if (!name || !address) {
-    alert("Please enter name and address.");
-    return;
-  }
+    if (!name || !address) {
+      alert("Please enter name and address.");
+      return;
+    }
 
-  sendBookingEmail({ name, address, urgency })
-    .then(() => {
-      document.getElementById("booking-status").textContent =
-        "✅ Booking confirmed!";
-      document.getElementById("booking-status-2").textContent =
-        "Owner notified via email.";
-      closeAgentModal();
-    })
-    .catch(() => {
-      document.getElementById("modal-result").textContent =
-        "❌ Error: Could not notify owner. Please try again.";
-    });
-};
+    sendBookingEmail({ name, address, urgency })
+      .then(() => {
+        document.getElementById("booking-status").textContent =
+          "✅ Booking confirmed!";
+        document.getElementById("booking-status-2").textContent =
+          "✅ Owner notified via email.";
+        closeAgentModal();
+      })
+      .catch(() => {
+        const res = document.getElementById("modal-result");
+        if (res) res.textContent = "❌ Error: Could not notify owner.";
+      });
+  };
+}
